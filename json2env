@@ -1,0 +1,54 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require 'json'
+
+options = {}
+
+optparse  = OptionParser.new do |opts|
+  opts.banner = 'Usage: json2env <arguments>'
+  opts.separator ''
+  opts.separator 'Required Arguments:'
+ 
+  options[:file]
+  opts.on('-f', '--file <path>',
+          'the file to read for conversion') do |file|
+    options[:file] = file
+  end
+
+  opts.separator 'Required Arguments:'
+
+  options[:prefix]
+  opts.on('-p', '--prefix <prefix>',
+          'a prefix to add to all env variables') do |prefix|
+    options[:prefix] = prefix
+  end
+
+end
+optparse.parse!
+
+raise OptionParser::MissingArgument, "You didnt specify a file to parse!"  if options[:file].nil?
+
+def check_valid_json(file)
+  begin
+    data = JSON.parse(File.read(file))
+  rescue JSON::ParserError => e
+    abort("File is not valid json!")
+  rescue Errno::ENOENT => e
+    abort("you specified a file that doesn't exist!")
+  end
+  return data
+end
+
+def explode_hash(data, prefix = nil)
+  data.each do |k,v|
+    if v.is_a?(Hash)
+      explode_hash(v, "#{prefix}_#{k}")
+    else
+      key = "#{prefix}_#{k}"
+      puts "#{key.upcase}=#{v}"
+    end
+  end
+end
+
+explode_hash(check_valid_json(options[:file]), options[:prefix])
